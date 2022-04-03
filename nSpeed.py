@@ -4,8 +4,11 @@
     Date: 12/26/2021
     Description: Speedtest.net Python wrapper
 """
+from datetime import datetime
+
 from speedtest import Speedtest
 import pandas as pd
+import pprint
 
 
 def bytes_to_mb(data):
@@ -15,8 +18,8 @@ def bytes_to_mb(data):
 class Speeder(Speedtest):
     primary_srv = None
     threads = None
-    download = None
-    upload = None
+    down = None
+    up = None
     ping = None
 
     def __init__(self, threads=3):
@@ -53,19 +56,32 @@ class Speeder(Speedtest):
         return self.ping
 
     def run(self):
+        print("[-] Testing Download")
         self.download(threads=self.threads)
+        print("[+] Download completed. Testing Upload")
         self.upload(threads=self.threads)
+        print("[+] Upload completed. Cleaning results")
         res = self.results.dict()
         results = self.process_data(res)
-        self.download, self.upload, self.ping = results[:3]
+        self.down, self.up, self.ping = list(results.values())[:3]
         return results
 
-    def process_data(self, results):
-        download = bytes_to_mb(results['download'])
-        upload = bytes_to_mb(results['upload'])
-        ping = round(results['ping'], 2)
-        bytes_sent = bytes_to_mb(results['bytes_sent'])
-        bytes_received = bytes_to_mb(results['bytes_received'])
-        source_public_ip = results['client']['ip']
-        self.set_primary_server(results['server'])
-        return download, upload, ping, bytes_sent, bytes_received, source_public_ip
+    def process_data(self, r):
+        data = {
+            'date': datetime.now().date().strftime('%m/%d/%Y'),
+            'time': datetime.now().time().strftime("%H:%M:%S"),
+            'download': bytes_to_mb(r['download']),
+            'upload': bytes_to_mb(r['upload']),
+            'ping': round(r['ping'], 2),
+            'bytes_sent': bytes_to_mb(r['bytes_sent']),
+            'bytes_recv': bytes_to_mb(r['bytes_received']),
+            'source_ip': r['client']['ip'],
+        }
+        # self.set_primary_server(r['server'])
+        return data
+
+
+if __name__ == '__main__':
+    x = Speeder()
+    results = x.run()
+    pprint.pprint(results)

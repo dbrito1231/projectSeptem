@@ -6,6 +6,8 @@
 """
 from datetime import datetime
 from nmap import PortScanner
+import pandas as pd
+import pprint
 
 
 class Mapper(PortScanner):
@@ -19,6 +21,7 @@ class Mapper(PortScanner):
         print("[-] Initializing Mapper")
         print("[-] Scanning network")
         self.__current__ = self.scan(hosts=f'{self.ip_addr}/24', arguments='-T4 -O')
+        self.generate_device_objects()
         print("[+] Init scan completed!")
 
     def generate_device_objects(self):
@@ -32,29 +35,36 @@ class Mapper(PortScanner):
         self.device_objects = _.copy()
         print("[+] Device gathering completed!")
 
+    def get_det_netstats(self):
+        data_lst = {}
+        for dev in self.device_objects:
+            data_lst[dev.get_ip_addr()] = dev.get_json()
+        return data_lst
+
     def get_current_used_ports(self):
         curr_ports = []
         for dev in self.device_objects:
             ports = dev.get_ports()
             if isinstance(ports, list):
+                print(f"[!] Ports found for {dev.get_ip_addr()}: {ports}")
                 for port in dev.get_ports():
                     curr_ports.append(port)
             else:
-                print(f"No ports found for {dev.get_ip_addr()}")
+                print(f"[X] No ports found for {dev.get_ip_addr()}")
         curr_ports = list(set(curr_ports))
         return sorted(curr_ports)
 
     def get_hosts(self):
         return list(self.__current__['scan'].keys())
 
-    def get_current_netstats(self):
+    def get_sum_netstats(self):
         curr = self.__current__['nmap']['scanstats'].copy()
         curr.pop('elapsed')
         curr['uphosts'] = int(curr['uphosts'])
         curr['downhosts'] = int(curr['downhosts'])
         curr['totalhosts'] = int(curr['totalhosts'])
-        curr['timestamp'] = datetime.strptime(curr['timestr'],
-                                              '%a %b %d %H:%M:%S %Y')
+        # curr['timestamp'] = datetime.strptime(curr['timestr'],
+        #                                       '%a %b %d %H:%M:%S %Y')
         return curr
 
     def get_ip_obj(self, ip_address):
@@ -96,7 +106,25 @@ class DeviceObj:
             else:
                 self.ports = None
         self.__raw_data__ = port_scan_obj.copy()
-        print(f"\t[+] {self.ip} completed!\n")
+        print(f"\t[+] {self.ip} completed!")
+
+    def get_json(self):
+        data_dict = {
+            'ip': self.ip,
+            'mac': self.mac,
+            'hostname': self.hostname,
+            'os': self.OS,
+            'ports': self.ports,
+            'vendor': self.vendor
+        }
+        for val in data_dict.keys():
+            if isinstance(data_dict[val], list) and len(data_dict[val]) == 0:
+                data_dict[val] = None
+            elif isinstance(data_dict[val], list) and len(data_dict[val]) == 1:
+                data_dict[val] = data_dict[val][0]
+            else:
+                continue
+        return data_dict
 
     def get_ip_addr(self):
         return self.ip
@@ -130,6 +158,8 @@ class DeviceObj:
 
 if __name__ == '__main__':
     mapp = Mapper('192.168.1.0')
-    mapp.generate_device_objects()
-    print(mapp.get_current_netstats())
+    # mapp.generate_device_objects()
+    # print(mapp.get_current_netstats())
     print(f"Ports used: {mapp.get_current_used_ports()}")
+    pprint.pprint(mapp.get_det_netstats())
+    pprint.pprint(mapp.get_sum_netstats())
