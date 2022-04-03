@@ -62,11 +62,6 @@ class Influx:
         return query
 
 
-# You can generate an API token from the "API Tokens Tab" in the UI
-token = "FwrmDbdUonIgP7BSZESkeY2p-oxR0ntSrS8kxMfMXL5DyeUmGWdklPGbdpCF5gE5o7bWvyxCjlXG8Ru9oM3rAw=="
-org = "devenv"
-bucket = "test_bucket"
-
 # with InfluxDBClient(url="http://localhost:8086", token=token, org=org) as client:
 #     write_api = client.write_api(write_options=ASYNCHRONOUS)
 #
